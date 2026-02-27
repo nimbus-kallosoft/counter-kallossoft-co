@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Counter — KallosSoft",
-  description: "A simple persistent counter app",
+  title: "Visitor Counter — KallosSoft",
+  description: "Live visitor counter for counter.kallossoft.co",
 };
 
 export default function RootLayout({

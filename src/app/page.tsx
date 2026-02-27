@@ -1,82 +1,63 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
   const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [animate, setAnimate] = useState(false);
+  const prevCount = useRef<number | null>(null);
 
-  const fetchCount = useCallback(async () => {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from("counters")
-      .select("value")
-      .eq("id", "main")
-      .single();
-
-    if (error) {
-      console.error("Error fetching counter:", error);
-      setCount(0);
-    } else {
-      setCount(data.value);
+  useEffect(() => {
+    async function recordVisit() {
+      try {
+        const res = await fetch("/api/visit", { method: "POST" });
+        const data = await res.json();
+        if (data.count != null) {
+          setCount(data.count);
+        }
+      } catch {
+        try {
+          const res = await fetch("/api/visit");
+          const data = await res.json();
+          if (data.count != null) {
+            setCount(data.count);
+          }
+        } catch {
+          setCount(0);
+        }
+      }
     }
-    setLoading(false);
+
+    recordVisit();
   }, []);
 
   useEffect(() => {
-    fetchCount();
-  }, [fetchCount]);
-
-  const updateCount = async (delta: number) => {
-    const supabase = getSupabase();
-    const newValue = (count ?? 0) + delta;
-    setCount(newValue);
-
-    const { error } = await supabase
-      .from("counters")
-      .update({ value: newValue })
-      .eq("id", "main");
-
-    if (error) {
-      console.error("Error updating counter:", error);
-      fetchCount();
+    if (count !== null && prevCount.current !== count) {
+      setAnimate(true);
+      const timer = setTimeout(() => setAnimate(false), 600);
+      prevCount.current = count;
+      return () => clearTimeout(timer);
     }
-  };
+  }, [count]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-[family-name:var(--font-geist-sans)] dark:bg-zinc-950">
-      <main className="flex flex-col items-center gap-8">
-        <h1 className="text-lg font-medium tracking-tight text-zinc-500 dark:text-zinc-400">
-          Counter
-        </h1>
-
-        {loading ? (
-          <div className="text-7xl font-bold tabular-nums text-zinc-300 dark:text-zinc-700">
-            —
-          </div>
-        ) : (
-          <div className="text-7xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
-            {count}
-          </div>
-        )}
-
-        <div className="flex gap-4">
-          <button
-            onClick={() => updateCount(-1)}
-            disabled={loading}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 text-xl font-medium text-zinc-600 transition-colors hover:bg-zinc-100 active:bg-zinc-200 disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:active:bg-zinc-700"
-          >
-            −
-          </button>
-          <button
-            onClick={() => updateCount(1)}
-            disabled={loading}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 text-xl font-medium text-zinc-600 transition-colors hover:bg-zinc-100 active:bg-zinc-200 disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:active:bg-zinc-700"
-          >
-            +
-          </button>
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+      <main className="flex flex-col items-center gap-6">
+        <div
+          className={`tabular-nums font-[family-name:var(--font-geist-mono)] transition-all duration-600 ${
+            count === null
+              ? "text-[#333] text-8xl sm:text-9xl font-bold"
+              : animate
+                ? "text-white text-8xl sm:text-9xl font-bold scale-105 opacity-100"
+                : "text-white text-8xl sm:text-9xl font-bold scale-100 opacity-100"
+          }`}
+        >
+          {count === null ? "—" : count.toLocaleString()}
         </div>
+
+        <p className="text-sm uppercase tracking-[0.3em] text-[#555] font-[family-name:var(--font-geist-sans)]">
+          Visits
+        </p>
       </main>
     </div>
   );
